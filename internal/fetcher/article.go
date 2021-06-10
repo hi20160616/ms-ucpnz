@@ -131,11 +131,6 @@ func (a *Article) fetchArticle(rawurl string) (*Article, error) {
 		return nil, err
 	}
 
-	// filter work
-	if a, err = a.filter(3); errors.Is(err, ErrTimeOverDays) {
-		return nil, err
-	}
-
 	// content should be the last step to fetch
 	a.Content, err = a.fetchContent()
 	if err != nil {
@@ -191,29 +186,6 @@ func shanghai(t time.Time) time.Time {
 	return t.In(loc)
 }
 
-var ErrTimeOverDays error = errors.New("article update time out of range")
-var ErrSameArticleExist error = errors.New("article title exist")
-
-// filter work for ignore articles by conditions
-// TODO: filter redundancy articles by title
-func (a *Article) filter(days int) (*Article, error) {
-	// if article time out of days, return nil and `ErrTimeOverDays`
-	// param days means fetch news during days from befor now.
-	during := func(days int, ts *timestamppb.Timestamp) bool {
-		t := shanghai(ts.AsTime())
-		if time.Now().Day()-t.Day() <= days {
-			return true
-		}
-		return false
-	}
-	// if during return false rt nil, and error as ErrTimeOverDays
-	if !during(days, a.UpdateTime) {
-		return nil, ErrTimeOverDays
-	}
-
-	return a, nil
-}
-
 func (a *Article) fetchContent() (string, error) {
 	if a.raw == nil {
 		return "", errors.Errorf("[%s] fetchContent: raw is nil: %s", configs.Data.MS.Title, a.U.String())
@@ -240,16 +212,6 @@ func (a *Article) fetchContent() (string, error) {
 	body = re.ReplaceAllString(body, "“")
 	re = regexp.MustCompile(`」`)
 	body = re.ReplaceAllString(body, "”")
-	// re = regexp.MustCompile(`<a.*?>`)
-	// body = re.ReplaceAllString(body, "")
-	// re = regexp.MustCompile(`</a>`)
-	// body = re.ReplaceAllString(body, "")
-	// re = regexp.MustCompile(`<i.*?>`)
-	// body = re.ReplaceAllString(body, "")
-	// re = regexp.MustCompile(`<!.*?>`)
-	// body = re.ReplaceAllString(body, "")
-	// re = regexp.MustCompile(`</.*?>`)
-	// body = re.ReplaceAllString(body, "")
 	re = regexp.MustCompile(`<.*?>`)
 	body = re.ReplaceAllString(body, "")
 	re = regexp.MustCompile(`Log in to leave a comment   `)
