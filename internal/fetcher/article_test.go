@@ -16,8 +16,8 @@ func TestFetchArticle(t *testing.T) {
 		url string
 		err error
 	}{
-		{"https://www.ucpnz.com/realtime/world/story20210602-1151196", ErrTimeOverDays},
-		{"https://www.ucpnz.com/realtime/world/story20210607-1153241", nil},
+		{"https://ucpnz.co.nz/2021/02/05/%e9%9f%a9%e5%9b%bd%e5%80%99%e9%80%89%e4%ba%ba%e9%80%80%e5%87%ba%e4%b8%96%e8%b4%b8%e6%80%bb%e5%b9%b2%e4%ba%8b%e9%80%89%e4%b8%be/", ErrTimeOverDays},
+		{"https://ucpnz.co.nz/2021/06/10/%e6%97%b6%e9%9a%944%e5%b9%b4%e5%86%8d%e5%87%ba%e5%be%81%ef%bc%81%e7%a5%9e%e8%88%9f%e5%8d%81%e4%ba%8c%e5%8f%b7%e8%bf%9b%e5%85%a5%e5%88%b0%e5%8f%91%e5%b0%84%e5%87%86%e5%a4%87%e9%98%b6%e6%ae%b5/", nil},
 	}
 	for _, tc := range tests {
 		a := NewArticle()

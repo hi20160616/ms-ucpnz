@@ -1,6 +1,7 @@
 package fetcher
 
 import (
+	"bytes"
 	"crypto/md5"
 	"fmt"
 	"log"
@@ -147,19 +148,30 @@ func (a *Article) fetchTitle() (string, error) {
 		return "", fmt.Errorf("[%s] getTitle error, there is no element <title>", configs.Data.MS.Title)
 	}
 	title := n[0].FirstChild.Data
-	rp := strings.NewReplacer(" | 联合早报网", "", " | 早报", "")
-	title = strings.TrimSpace(rp.Replace(title))
+	title = strings.TrimSpace(title)
 	gears.ReplaceIllegalChar(&title)
 	return title, nil
 }
 
 func (a *Article) fetchUpdateTime() (*timestamppb.Timestamp, error) {
-	if a.raw == nil {
-		return nil, errors.Errorf("[%s] fetchUpdateTime: raw is nil: %s", configs.Data.MS.Title, a.U.String())
+	if a.doc == nil {
+		return nil, errors.Errorf("[%s] fetchUpdateTime: doc is nil: %s", configs.Data.MS.Title, a.U.String())
 	}
-	re := regexp.MustCompile(`"datePublished": "(.*?)",`)
-	rs := re.FindAllSubmatch(a.raw, -1)[0]
-	t, err := time.Parse(time.RFC3339, string(rs[1]))
+	doc := exhtml.ElementsByTagAndClass(a.doc, "span", "td-post-date")
+	d := []string{}
+	if doc == nil {
+		return nil, fmt.Errorf("[%s] fetchUpdateTime extract nothing: %s",
+			configs.Data.MS.Title, a.U.String())
+	}
+	//focus on node like "<span class="td-post-date"><time class="entry-date updated td-module-date" datetime="2020-11-05T13:30:02+00:00" >2020-11-05</time></span>"
+	if doc[0].LastChild.Attr[1].Val != "" {
+		d = append(d, doc[0].LastChild.Attr[1].Val)
+	}
+	if len(d) <= 0 {
+		return nil, fmt.Errorf("[%s] fetchUpdateTime got nothing: %s",
+			configs.Data.MS.Title, a.U.String())
+	}
+	t, err := time.Parse(time.RFC3339, string(d[0]))
 	if err != nil {
 		return nil, err
 	}
@@ -195,37 +207,53 @@ func (a *Article) filter(days int) (*Article, error) {
 }
 
 func (a *Article) fetchContent() (string, error) {
-	if a.doc == nil {
-		return "", errors.Errorf("[%s] fetchContent: doc is nil: %s", configs.Data.MS.Title, a.U.String())
+	if a.raw == nil {
+		return "", errors.Errorf("[%s] fetchContent: raw is nil: %s", configs.Data.MS.Title, a.U.String())
 	}
-	body := ""
-	// Fetch content nodes
-	nodes := exhtml.ElementsByTagAndId(a.doc, "article", "article-body")
-	if len(nodes) == 0 {
-		nodes = exhtml.ElementsByTagAndClass(a.doc, "div", "article-content-rawhtml")
+
+	raw := a.raw
+	//td-post-content tagdiv-type
+	r := exhtml.DivWithAttr2(raw, "class", "td-post-content tagdiv-type")
+	ps := [][]byte{}
+	b := bytes.Buffer{}
+	re := regexp.MustCompile(`<p.*?>(.*?)</p>`)
+	for _, v := range re.FindAllSubmatch(r, -1) {
+		ps = append(ps, v[1])
 	}
-	if len(nodes) == 0 {
-		nodes = exhtml.ElementsByTagAndClass(a.doc, "div", "article-content-container")
+	if len(ps) == 0 {
+		return "", fmt.Errorf("no <p> matched")
 	}
-	if len(nodes) == 0 {
-		return "", errors.Errorf("[%s] no content extract from %s", configs.Data.MS.Title, a.U.String())
+	for _, p := range ps {
+		b.Write(p)
+		b.Write([]byte("  \n"))
 	}
-	plist := exhtml.ElementsByTag(nodes[0], "p")
-	for _, v := range plist {
-		if v.FirstChild == nil {
-			continue
-		} else if v.FirstChild.FirstChild != nil &&
-			v.FirstChild.Data == "strong" {
-			a := exhtml.ElementsByTag(v, "span")
-			for _, aa := range a {
-				body += aa.FirstChild.Data
-			}
-			body += "  \n"
-		} else {
-			body += v.FirstChild.Data + "  \n"
-		}
-	}
-	body = strings.ReplaceAll(body, "span  \n", "")
+	body := b.String()
+	re = regexp.MustCompile(`「`)
+	body = re.ReplaceAllString(body, "“")
+	re = regexp.MustCompile(`」`)
+	body = re.ReplaceAllString(body, "”")
+	// re = regexp.MustCompile(`<a.*?>`)
+	// body = re.ReplaceAllString(body, "")
+	// re = regexp.MustCompile(`</a>`)
+	// body = re.ReplaceAllString(body, "")
+	// re = regexp.MustCompile(`<i.*?>`)
+	// body = re.ReplaceAllString(body, "")
+	// re = regexp.MustCompile(`<!.*?>`)
+	// body = re.ReplaceAllString(body, "")
+	// re = regexp.MustCompile(`</.*?>`)
+	// body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`<.*?>`)
+	body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`Log in to leave a comment   `)
+	body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`<script.*?</script>`)
+	body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`<blockquote.*?</blockquote>`)
+	body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`<iframe.*?</iframe>`)
+	body = re.ReplaceAllString(body, "")
+	re = regexp.MustCompile(`<strong.*?</strong>`)
+	body = re.ReplaceAllString(body, "")
 
 	return body, nil
 }

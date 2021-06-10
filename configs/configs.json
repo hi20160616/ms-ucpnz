@@ -2,14 +2,11 @@
   "dbpath":"db",
   "microservice":{
     "title":"ucpnz",
-    "domain":"www.ucpnz.com",
+    "domain":"ucpnz.co.nz",
     "url":[
-      "https://www.ucpnz.com/realtime/world",
-      "https://www.ucpnz.com/news/world",
-      "https://www.ucpnz.com/realtime/china",
-      "https://www.ucpnz.com/news/china"
+      "https://ucpnz.co.nz/"
     ],
-    "addr":":10002",
+    "addr":":10010",
     "timeout":"1s",
     "heartbeat":"5m"
   }
