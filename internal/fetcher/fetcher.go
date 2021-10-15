@@ -14,8 +14,8 @@ import (
 
 // Fetch fetch and storage all stuffs to `db/articles.json`
 func Fetch() error {
-	defer log.Printf("[%s] Fetch Done.", configs.Data.MS.Title)
-	log.Printf("[%s] Fetching ...", configs.Data.MS.Title)
+	defer log.Printf("[%s] Fetch Done.", configs.Data.MS["ucpnz"].Title)
+	log.Printf("[%s] Fetching ...", configs.Data.MS["ucpnz"].Title)
 
 	as, err := fetch(context.Background())
 	if err != nil {
@@ -55,7 +55,7 @@ func fetch(ctx context.Context) (as []*Article, err error) {
 					// just for log to ignore err
 					link, _ := url.QueryUnescape(link)
 					log.Printf("[%s] fetch error: %v, link: %s",
-						configs.Data.MS.Title, err, link)
+						configs.Data.MS["ucpnz"].Title, err, link)
 				}
 				err = nil
 				continue
